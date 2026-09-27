@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Initialize Modals
   initModals();
+
+  // Initialize Contact Form (Formspree)
+  initContactForm();
 });
 
 /* ==========================================================================
@@ -613,4 +616,88 @@ function initModals() {
       }
     });
   }
+}
+
+/* ==========================================================================
+   7. FORMSPREE CONTACT FORM
+   ========================================================================== */
+function initContactForm() {
+  const form = document.getElementById('contact-form');
+  const status = document.getElementById('contact-form-status');
+  const submitBtn = document.getElementById('contact-submit-btn');
+
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const actionUrl = form.getAttribute('action');
+    if (!actionUrl || actionUrl.includes('YOUR_FORMSPREE_ID')) {
+      if (status) {
+        status.style.display = 'block';
+        status.style.background = '#fef3c7';
+        status.style.color = '#92400e';
+        status.style.border = '1px solid #fde68a';
+        status.innerHTML = '<i class="fa-solid fa-circle-info" style="margin-right: 0.4rem;"></i> Please set your Formspree Form ID in <code>index.html</code> (e.g. <code>https://formspree.io/f/xyz...</code>) to connect to your email.';
+      }
+      return;
+    }
+
+    const originalBtnText = submitBtn ? submitBtn.innerHTML : 'Send Message';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 0.4rem;"></i> Sending...';
+    }
+
+    if (status) {
+      status.style.display = 'none';
+    }
+
+    try {
+      const response = await fetch(actionUrl, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        form.reset();
+        if (status) {
+          status.style.display = 'block';
+          status.style.background = '#d8e2dc';
+          status.style.color = 'var(--primary)';
+          status.style.border = '1px solid #b7c9be';
+          status.innerHTML = '<i class="fa-solid fa-circle-check" style="margin-right: 0.4rem;"></i> Thank you! Your message has been sent successfully. We will reply to your email shortly.';
+        }
+      } else {
+        const errorData = await response.json().catch(() => null);
+        let errorMsg = 'Oops! There was a problem submitting your message. Please try again.';
+        if (errorData && errorData.errors && errorData.errors.length) {
+          errorMsg = errorData.errors.map(err => err.message).join(', ');
+        }
+        if (status) {
+          status.style.display = 'block';
+          status.style.background = '#fee2e2';
+          status.style.color = '#991b1b';
+          status.style.border = '1px solid #fecaca';
+          status.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="margin-right: 0.4rem;"></i> ${errorMsg}`;
+        }
+      }
+    } catch (err) {
+      if (status) {
+        status.style.display = 'block';
+        status.style.background = '#fee2e2';
+        status.style.color = '#991b1b';
+        status.style.border = '1px solid #fecaca';
+        status.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="margin-right: 0.4rem;"></i> Network error. Please check your internet connection or email us directly at greenkidneylab@outlook.com.';
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+      }
+    }
+  });
 }
